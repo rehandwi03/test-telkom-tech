@@ -1,5 +1,3 @@
-## Majoo POS (Point Of Sales) <a name = "about"></a>
-
 ## Command <a name = "getting_started"></a>
 
 ### Application Lifecycle
