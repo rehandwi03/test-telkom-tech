@@ -178,6 +178,8 @@ func TestFind(t *testing.T) {
 
 	productSvc := service.NewProductService(productMock)
 
-	_, err := productSvc.Find(ctx, &req)
+	results, err := productSvc.Find(ctx, &req)
 	assert.NoError(t, err)
+	assert.NotNil(t, results)
+	assert.Len(t, results.Data, 1)
 }
