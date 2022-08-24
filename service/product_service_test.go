@@ -13,7 +13,6 @@ import (
 	"interview-telkom-6/repository/persistence/mocks"
 	"interview-telkom-6/request"
 	"interview-telkom-6/service"
-	"log"
 	"testing"
 	"time"
 )
@@ -137,9 +136,49 @@ func TestStoreErrorProductExist(t *testing.T) {
 	productSvc := service.NewProductService(productMock)
 
 	err = productSvc.Store(context.TODO(), &req)
-	log.Println(err)
 	assert.Error(t, err)
 	assert.NotNil(t, err)
+}
+
+func TestStoreErrorProductNoRows(t *testing.T) {
+	mockCrtl := gomock.NewController(t)
+	defer mockCrtl.Finish()
+
+	productMock := mocks.NewMockProductRepository(mockCrtl)
+
+	req := request.ProductAddRequest{
+		Name:              "Makanan",
+		Price:             10000,
+		Description:       "Makanan Enak",
+		IsDiscount:        true,
+		StartDateDiscount: "2022-08-24",
+		EndDateDiscount:   "2022-08-30",
+		DiscountValue:     10000.00,
+	}
+
+	sdParse, err := time.Parse("2006-01-02", req.StartDateDiscount)
+	assert.NoError(t, err)
+	edParse, err := time.Parse("2006-01-02", req.EndDateDiscount)
+	assert.NoError(t, err)
+
+	product := entity.Product{
+		Name:              req.Name,
+		Price:             req.Price,
+		Description:       req.Description,
+		IsDiscount:        req.IsDiscount,
+		DiscountValue:     sql.NullFloat64{Float64: req.DiscountValue, Valid: true},
+		StartDateDiscount: sql.NullTime{Time: sdParse, Valid: true},
+		EndDateDiscount:   sql.NullTime{Time: edParse, Valid: true},
+	}
+	w := persistence.QueryBuilderCriteria{}
+	w.Where = &persistence.Where{And: []squirrel.And{{squirrel.Eq{"name": req.Name}}}}
+	productMock.EXPECT().Get(context.TODO(), &w).Return(entity.Product{}, sql.ErrNoRows)
+	productMock.EXPECT().Store(context.TODO(), &product).Return(product, nil)
+
+	productSvc := service.NewProductService(productMock)
+
+	err = productSvc.Store(context.TODO(), &req)
+	assert.Nil(t, err)
 }
 
 func TestFind(t *testing.T) {
@@ -264,7 +303,6 @@ func TestFindError(t *testing.T) {
 	productSvc := service.NewProductService(productMock)
 
 	_, err := productSvc.Find(ctx, &req)
-	log.Println(err)
 	assert.Error(t, err)
 }
 
@@ -305,6 +343,5 @@ func TestFindCountError(t *testing.T) {
 	productSvc := service.NewProductService(productMock)
 
 	_, err := productSvc.Find(ctx, &req)
-	log.Println(err)
 	assert.Error(t, err)
 }
