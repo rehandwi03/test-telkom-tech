@@ -1,0 +1,12 @@
+stages:
+  - test
+
+unit_test:
+  image: golang:1.18
+  stage: test
+  script: go test -race -covermode=atomic -coverprofile=coverage.out
+
+after_script:
+  - curl -Os https://uploader.codecov.io/latest/linux/codecov
+  - chmod +x codecov
+  - ./codecov -t ${TOKEN}
