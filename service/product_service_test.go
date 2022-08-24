@@ -183,3 +183,47 @@ func TestFind(t *testing.T) {
 	assert.NotNil(t, results)
 	assert.Len(t, results.Data, 1)
 }
+
+func TestFindWithSearch(t *testing.T) {
+	ctx := context.TODO()
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	productMock := mocks.NewMockProductRepository(mockCtrl)
+
+	req := request.ProductCriteria{}
+	req.Search = "makanan"
+	req.Limit = 1
+	req.Page = 1
+
+	b := persistence.QueryBuilderCriteria{}
+	b.Where = &persistence.Where{And: []squirrel.And{{squirrel.ILike{"name": "%" + req.Search + "%"}}}}
+	limit := uint64(req.Limit)
+	page := uint64(req.Page)
+	offset := (page - 1) * limit
+	b.Limit = &limit
+	b.Offset = &offset
+
+	res := []entity.Product{
+		{
+			ID:                uuid.New(),
+			Name:              "Makanan",
+			Price:             10000,
+			Description:       "Makanan Enak",
+			IsDiscount:        false,
+			StartDateDiscount: sql.NullTime{},
+			EndDateDiscount:   sql.NullTime{},
+			DiscountValue:     sql.NullFloat64{},
+		},
+	}
+	var totalRow int64 = 1
+	productMock.EXPECT().Find(ctx, &b).Return(res, nil)
+	productMock.EXPECT().Count(ctx, &b).Return(totalRow, nil)
+
+	productSvc := service.NewProductService(productMock)
+
+	results, err := productSvc.Find(ctx, &req)
+	assert.NoError(t, err)
+	assert.NotNil(t, results)
+	assert.Len(t, results.Data, 1)
+}
