@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"github.com/Masterminds/squirrel"
 	"github.com/golang/mock/gomock"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"interview-telkom-6/entity"
 	"interview-telkom-6/repository/persistence"
@@ -159,10 +160,21 @@ func TestFind(t *testing.T) {
 	b.Limit = &limit
 	b.Offset = &offset
 
-	// res := util.Pagination{}
-	// totalRow := 1
-	productMock.EXPECT().Find(ctx, &b)
-	productMock.EXPECT().Count(ctx, &b)
+	res := []entity.Product{
+		{
+			ID:                uuid.New(),
+			Name:              "Makanan",
+			Price:             10000,
+			Description:       "Makanan Enak",
+			IsDiscount:        false,
+			StartDateDiscount: sql.NullTime{},
+			EndDateDiscount:   sql.NullTime{},
+			DiscountValue:     sql.NullFloat64{},
+		},
+	}
+	var totalRow int64 = 1
+	productMock.EXPECT().Find(ctx, &b).Return(res, nil)
+	productMock.EXPECT().Count(ctx, &b).Return(totalRow, nil)
 
 	productSvc := service.NewProductService(productMock)
 
