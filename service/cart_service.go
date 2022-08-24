@@ -19,13 +19,13 @@ type CartService struct {
 	ctx             context.Context
 	cartRepo        *persistence.CartRepository
 	cartProductRepo *persistence.CartProductRepository
-	productRepo     *persistence.ProductRepository
+	productRepo     persistence.ProductRepository
 }
 
 func NewCartService(
 	ctx context.Context, cartRepo *persistence.CartRepository,
 	cartProductRepo *persistence.CartProductRepository,
-	productRepo *persistence.ProductRepository,
+	productRepo persistence.ProductRepository,
 ) *CartService {
 	return &CartService{
 		ctx: ctx, cartRepo: cartRepo, cartProductRepo: cartProductRepo, productRepo: productRepo,

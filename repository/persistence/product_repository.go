@@ -9,25 +9,39 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type ProductRepository struct {
+type ProductRepository interface {
+	WithTx(conn *sqlx.Tx) ProductRepository
+	Get(ctx context.Context, builder *QueryBuilderCriteria) (
+		res entity.Product, err error,
+	)
+	Find(ctx context.Context, builder *QueryBuilderCriteria) (
+		res []entity.Product, err error,
+	)
+	Store(ctx context.Context, data *entity.Product) (res entity.Product, err error)
+	Update(ctx context.Context, data *entity.Product) (res entity.Product, err error)
+	Delete(ctx context.Context, data *entity.Product) (err error)
+	Count(ctx context.Context, builder *QueryBuilderCriteria) (totalRow int64, err error)
+}
+
+type productRepository struct {
 	Conn      Queryer
 	TableName string
 }
 
-func NewProductRepository(conn *sqlx.DB) *ProductRepository {
-	return &ProductRepository{Conn: conn, TableName: "products"}
+func NewProductRepository(conn *sqlx.DB) ProductRepository {
+	return &productRepository{Conn: conn, TableName: "products"}
 }
 
-func (r ProductRepository) WithTx(conn *sqlx.Tx) *ProductRepository {
+func (r productRepository) WithTx(conn *sqlx.Tx) ProductRepository {
 	if conn == nil {
 		log.Println("transaction database not found")
 		return &r
 	}
 
-	return &ProductRepository{Conn: conn, TableName: "products"}
+	return &productRepository{Conn: conn, TableName: "products"}
 }
 
-func (r ProductRepository) Get(ctx context.Context, builder *QueryBuilderCriteria) (
+func (r productRepository) Get(ctx context.Context, builder *QueryBuilderCriteria) (
 	res entity.Product, err error,
 ) {
 	sq, err := builder.GenerateSquirrelQuery(r.TableName, DATABASE_ENGINE_POSTGRESQL)
@@ -54,7 +68,7 @@ func (r ProductRepository) Get(ctx context.Context, builder *QueryBuilderCriteri
 	return res, nil
 }
 
-func (r ProductRepository) Find(ctx context.Context, builder *QueryBuilderCriteria) (
+func (r productRepository) Find(ctx context.Context, builder *QueryBuilderCriteria) (
 	res []entity.Product, err error,
 ) {
 	sq, err := builder.GenerateSquirrelQuery(r.TableName, DATABASE_ENGINE_POSTGRESQL)
@@ -81,7 +95,7 @@ func (r ProductRepository) Find(ctx context.Context, builder *QueryBuilderCriter
 	return res, nil
 }
 
-func (r ProductRepository) Store(ctx context.Context, data *entity.Product) (res entity.Product, err error) {
+func (r productRepository) Store(ctx context.Context, data *entity.Product) (res entity.Product, err error) {
 	data.GenerateUUID()
 	query := fmt.Sprintf(
 		"INSERT INTO %s (id,  name, price, description, is_discount, "+
@@ -100,7 +114,7 @@ func (r ProductRepository) Store(ctx context.Context, data *entity.Product) (res
 	return *data, err
 }
 
-func (r ProductRepository) Update(ctx context.Context, data *entity.Product) (res entity.Product, err error) {
+func (r productRepository) Update(ctx context.Context, data *entity.Product) (res entity.Product, err error) {
 	query := fmt.Sprintf(
 		"UPDATE %s SET name=:name, price=:price, description=:description, "+
 			"is_discount=:is_discount, start_date_discount=:start_date_discount, end_date_discount=:end_date_discount WHERE id=:id",
@@ -116,7 +130,7 @@ func (r ProductRepository) Update(ctx context.Context, data *entity.Product) (re
 	return *data, nil
 }
 
-func (r ProductRepository) Delete(ctx context.Context, data *entity.Product) (err error) {
+func (r productRepository) Delete(ctx context.Context, data *entity.Product) (err error) {
 	query := fmt.Sprintf("DELETE FROM %s WHERE id = $1", r.TableName)
 	log.Println(query)
 	_, err = r.Conn.Exec(query, data.ID)
@@ -128,7 +142,7 @@ func (r ProductRepository) Delete(ctx context.Context, data *entity.Product) (er
 	return nil
 }
 
-func (r ProductRepository) Count(ctx context.Context, builder *QueryBuilderCriteria) (totalRow int64, err error) {
+func (r productRepository) Count(ctx context.Context, builder *QueryBuilderCriteria) (totalRow int64, err error) {
 	sq, err := builder.GenerateSquirrelQueryCountData(r.TableName, DATABASE_ENGINE_POSTGRESQL)
 	if err != nil {
 		log.Println(err)

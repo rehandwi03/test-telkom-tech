@@ -15,11 +15,11 @@ import (
 )
 
 type ProductService struct {
-	productRepo *persistence.ProductRepository
+	productRepo persistence.ProductRepository
 }
 
 func NewProductService(
-	productRepo *persistence.ProductRepository,
+	productRepo persistence.ProductRepository,
 ) *ProductService {
 	return &ProductService{
 		productRepo: productRepo,
