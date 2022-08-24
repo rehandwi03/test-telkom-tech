@@ -139,3 +139,33 @@ func TestStoreErrorProductExist(t *testing.T) {
 	assert.Error(t, err)
 	assert.NotNil(t, err)
 }
+
+func TestFind(t *testing.T) {
+	ctx := context.TODO()
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	productMock := mocks.NewMockProductRepository(mockCtrl)
+
+	req := request.ProductCriteria{}
+	req.Limit = 1
+	req.Page = 1
+
+	b := persistence.QueryBuilderCriteria{}
+	b.Where = &persistence.Where{}
+	limit := uint64(req.Limit)
+	page := uint64(req.Page)
+	offset := (page - 1) * limit
+	b.Limit = &limit
+	b.Offset = &offset
+
+	// res := util.Pagination{}
+	// totalRow := 1
+	productMock.EXPECT().Find(ctx, &b)
+	productMock.EXPECT().Count(ctx, &b)
+
+	productSvc := service.NewProductService(productMock)
+
+	_, err := productSvc.Find(ctx, &req)
+	assert.NoError(t, err)
+}
