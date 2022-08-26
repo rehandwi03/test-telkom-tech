@@ -140,7 +140,7 @@ func TestStoreErrorProductExist(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestStoreErrorProductNoRows(t *testing.T) {
+func TestStoreErrorProductGet(t *testing.T) {
 	mockCrtl := gomock.NewController(t)
 	defer mockCrtl.Finish()
 
@@ -155,30 +155,14 @@ func TestStoreErrorProductNoRows(t *testing.T) {
 		EndDateDiscount:   "2022-08-30",
 		DiscountValue:     10000.00,
 	}
-
-	sdParse, err := time.Parse("2006-01-02", req.StartDateDiscount)
-	assert.NoError(t, err)
-	edParse, err := time.Parse("2006-01-02", req.EndDateDiscount)
-	assert.NoError(t, err)
-
-	product := entity.Product{
-		Name:              req.Name,
-		Price:             req.Price,
-		Description:       req.Description,
-		IsDiscount:        req.IsDiscount,
-		DiscountValue:     sql.NullFloat64{Float64: req.DiscountValue, Valid: true},
-		StartDateDiscount: sql.NullTime{Time: sdParse, Valid: true},
-		EndDateDiscount:   sql.NullTime{Time: edParse, Valid: true},
-	}
 	w := persistence.QueryBuilderCriteria{}
 	w.Where = &persistence.Where{And: []squirrel.And{{squirrel.Eq{"name": req.Name}}}}
-	productMock.EXPECT().Get(context.TODO(), &w).Return(entity.Product{}, sql.ErrNoRows)
-	productMock.EXPECT().Store(context.TODO(), &product).Return(product, nil)
+	productMock.EXPECT().Get(context.TODO(), &w).Return(entity.Product{}, errors.New("something wrong"))
 
 	productSvc := service.NewProductService(productMock)
 
-	err = productSvc.Store(context.TODO(), &req)
-	assert.Nil(t, err)
+	err := productSvc.Store(context.TODO(), &req)
+	assert.Error(t, err)
 }
 
 func TestFind(t *testing.T) {
