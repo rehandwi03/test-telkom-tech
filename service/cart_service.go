@@ -15,24 +15,32 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type CartService struct {
+type cartService struct {
 	ctx             context.Context
-	cartRepo        *persistence.CartRepository
-	cartProductRepo *persistence.CartProductRepository
+	cartRepo        persistence.CartRepository
+	cartProductRepo persistence.CartProductRepository
 	productRepo     persistence.ProductRepository
 }
 
+type CartService interface {
+	DeleteProduct(ctx context.Context, productID string) error
+	Find(ctx context.Context, req *request.CartCriteria) (
+		res *response.CartResponse, err error,
+	)
+	Store(ctx context.Context, req *request.CartAddRequest) (res *response.CartResponse, err error)
+}
+
 func NewCartService(
-	ctx context.Context, cartRepo *persistence.CartRepository,
-	cartProductRepo *persistence.CartProductRepository,
+	ctx context.Context, cartRepo persistence.CartRepository,
+	cartProductRepo persistence.CartProductRepository,
 	productRepo persistence.ProductRepository,
-) *CartService {
-	return &CartService{
+) CartService {
+	return &cartService{
 		ctx: ctx, cartRepo: cartRepo, cartProductRepo: cartProductRepo, productRepo: productRepo,
 	}
 }
 
-func (s *CartService) DeleteProduct(ctx context.Context, productID string) error {
+func (s *cartService) DeleteProduct(ctx context.Context, productID string) error {
 	if productID == "" {
 		return &util.BadRequestError{Message: "product id not found"}
 	}
@@ -58,7 +66,7 @@ func (s *CartService) DeleteProduct(ctx context.Context, productID string) error
 	return nil
 }
 
-func (s *CartService) Find(ctx context.Context, req *request.CartCriteria) (
+func (s *cartService) Find(ctx context.Context, req *request.CartCriteria) (
 	res *response.CartResponse, err error,
 ) {
 	builder := persistence.QueryBuilderCriteria{}
@@ -133,7 +141,7 @@ func (s *CartService) Find(ctx context.Context, req *request.CartCriteria) (
 	return &data, nil
 }
 
-func (s *CartService) Store(ctx context.Context, req *request.CartAddRequest) (res *response.CartResponse, err error) {
+func (s *cartService) Store(ctx context.Context, req *request.CartAddRequest) (res *response.CartResponse, err error) {
 	tx, err := s.ctx.Value("db").(*sqlx.DB).Beginx()
 	if err != nil {
 		log.Println(err)
@@ -257,9 +265,9 @@ func (s *CartService) Store(ctx context.Context, req *request.CartAddRequest) (r
 	return res, nil
 }
 
-func (s *CartService) insertCartProduct(
+func (s *cartService) insertCartProduct(
 	ctx context.Context, cartID uuid.UUID, req *request.CartAddProductRequest,
-	cartRepoProduct *persistence.CartProductRepository,
+	cartRepoProduct persistence.CartProductRepository,
 ) (err error) {
 	cp := entity.CartProduct{
 		CartID:    cartID,

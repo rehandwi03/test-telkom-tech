@@ -8,25 +8,43 @@ import (
 	"log"
 )
 
-type CartProductRepository struct {
+type cartProductRepo struct {
 	Conn      Queryer
 	TableName string
 }
 
-func NewCartProductRepository(conn *sqlx.DB) *CartProductRepository {
-	return &CartProductRepository{Conn: conn, TableName: "cart_products"}
+type CartProductRepository interface {
+	WithTx(conn *sqlx.Tx) CartProductRepository
+	Get(ctx context.Context, builder *QueryBuilderCriteria) (
+		res entity.CartProduct, err error,
+	)
+	Find(ctx context.Context, builder *QueryBuilderCriteria) (
+		res []entity.CartProduct, err error,
+	)
+	Store(ctx context.Context, data *entity.CartProduct) (
+		res entity.CartProduct, err error,
+	)
+	Update(ctx context.Context, data *entity.CartProduct) (
+		res entity.CartProduct, err error,
+	)
+	Delete(ctx context.Context, data *entity.CartProduct) (err error)
+	Count(ctx context.Context, builder *QueryBuilderCriteria) (totalRow int64, err error)
 }
 
-func (r CartProductRepository) WithTx(conn *sqlx.Tx) *CartProductRepository {
+func NewCartProductRepo(conn *sqlx.DB) CartProductRepository {
+	return &cartProductRepo{Conn: conn, TableName: "cart_products"}
+}
+
+func (r cartProductRepo) WithTx(conn *sqlx.Tx) CartProductRepository {
 	if conn == nil {
 		log.Println("transaction database not found")
 		return &r
 	}
 
-	return &CartProductRepository{Conn: conn}
+	return &cartProductRepo{Conn: conn}
 }
 
-func (r CartProductRepository) Get(ctx context.Context, builder *QueryBuilderCriteria) (
+func (r cartProductRepo) Get(ctx context.Context, builder *QueryBuilderCriteria) (
 	res entity.CartProduct, err error,
 ) {
 	sq, err := builder.GenerateSquirrelQuery(r.TableName, DATABASE_ENGINE_POSTGRESQL)
@@ -53,7 +71,7 @@ func (r CartProductRepository) Get(ctx context.Context, builder *QueryBuilderCri
 	return res, nil
 }
 
-func (r CartProductRepository) Find(ctx context.Context, builder *QueryBuilderCriteria) (
+func (r cartProductRepo) Find(ctx context.Context, builder *QueryBuilderCriteria) (
 	res []entity.CartProduct, err error,
 ) {
 	sq, err := builder.GenerateSquirrelQuery(r.TableName, DATABASE_ENGINE_POSTGRESQL)
@@ -80,7 +98,7 @@ func (r CartProductRepository) Find(ctx context.Context, builder *QueryBuilderCr
 	return res, nil
 }
 
-func (r CartProductRepository) Store(ctx context.Context, data *entity.CartProduct) (
+func (r cartProductRepo) Store(ctx context.Context, data *entity.CartProduct) (
 	res entity.CartProduct, err error,
 ) {
 	query := fmt.Sprintf(
@@ -96,7 +114,7 @@ func (r CartProductRepository) Store(ctx context.Context, data *entity.CartProdu
 	return *data, err
 }
 
-func (r CartProductRepository) Update(ctx context.Context, data *entity.CartProduct) (
+func (r cartProductRepo) Update(ctx context.Context, data *entity.CartProduct) (
 	res entity.CartProduct, err error,
 ) {
 	query := fmt.Sprintf(
@@ -112,7 +130,7 @@ func (r CartProductRepository) Update(ctx context.Context, data *entity.CartProd
 	return *data, nil
 }
 
-func (r CartProductRepository) Delete(ctx context.Context, data *entity.CartProduct) (err error) {
+func (r cartProductRepo) Delete(ctx context.Context, data *entity.CartProduct) (err error) {
 	query := fmt.Sprintf("DELETE FROM cart_products WHERE product_id = $1")
 	log.Println(query)
 	_, err = r.Conn.Exec(query, data.ProductID)
@@ -124,7 +142,7 @@ func (r CartProductRepository) Delete(ctx context.Context, data *entity.CartProd
 	return nil
 }
 
-func (r CartProductRepository) Count(ctx context.Context, builder *QueryBuilderCriteria) (totalRow int64, err error) {
+func (r cartProductRepo) Count(ctx context.Context, builder *QueryBuilderCriteria) (totalRow int64, err error) {
 	sq, err := builder.GenerateSquirrelQueryCountData(r.TableName, DATABASE_ENGINE_POSTGRESQL)
 	if err != nil {
 		log.Println(err)
